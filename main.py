@@ -34,7 +34,7 @@ st.markdown('<div class="subtitle">Ask anything about your database</div>', unsa
 
 # ---------------- API ----------------
 def call_api(user_input):
-    url = "https://querypilot-ai.onrender.com//query"
+    url = "https://querypilot-ai.onrender.com/query"
     return requests.get(url, params={"user_input": user_input}).json()
 
 # ---------------- SESSION ----------------
