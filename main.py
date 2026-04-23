@@ -107,3 +107,23 @@ for msg in st.session_state.messages:
         if msg["role"] == "assistant" and msg.get("data") is None and msg.get("content"):
             if "CREATE" in msg["content"] or "INSERT" in msg["content"]:
                 st.info("💡 This is an explanation (not executed):")
+
+
+def call_api(user_input):
+    url = "https://querypilot-ai.onrender.com/query"
+
+    try:
+        res = requests.get(url, params={"user_input": user_input}, timeout=30)
+
+        if res.status_code != 200:
+            return {"error": f"API Error: {res.status_code}"}
+
+        try:
+            return res.json()
+        except:
+            return {"error": "Backend waking up... try again in 5 seconds"}
+
+    except requests.exceptions.Timeout:
+        return {"error": "Server is waking up, please try again"}
+    except Exception as e:
+        return {"error": str(e)}
