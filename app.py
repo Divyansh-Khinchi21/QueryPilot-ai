@@ -14,7 +14,7 @@ def is_safe(query):
 @app.get("/query")
 def run_query(user_input: str):
     try:
-        # 🔥 QUICK RESPONSE TEST (IMPORTANT)
+        # ✅ Quick test endpoint
         if user_input.lower() in ["test", "hello"]:
             return {
                 "query": "SELECT 1",
@@ -22,17 +22,16 @@ def run_query(user_input: str):
                 "columns": ["result"]
             }
 
-        # 🔥 STEP 1: NL → SQL
+        # 🔹 Convert NL → SQL
         query = convert_to_sql(user_input)
 
         if "ERROR" in query:
             return {"error": query}
 
-        # 🔥 STEP 2: Safety check
         if not is_safe(query):
             return {"error": "Only SELECT queries are allowed."}
 
-        # 🔥 STEP 3: DB connect
+        # 🔹 Execute Query
         conn = get_connection()
         cursor = conn.cursor()
 
@@ -40,30 +39,8 @@ def run_query(user_input: str):
             cursor.execute(query)
 
         except Exception as err:
-            # 🔥 Auto-fix query
-            fix_prompt = f"""
-            Fix this SQL query:
+            return {"error": f"SQL Error: {str(err)}"}
 
-            {query}
-
-            Error:
-            {err}
-
-            Only return corrected SQL.
-            """
-
-            fixed_query = convert_to_sql(fix_prompt)
-
-            if "ERROR" in fixed_query:
-                return {"error": fixed_query}
-
-            if not is_safe(fixed_query):
-                return {"error": "Unsafe query after fix"}
-
-            cursor.execute(fixed_query)
-            query = fixed_query
-
-        # 🔥 STEP 4: Fetch data
         data = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 

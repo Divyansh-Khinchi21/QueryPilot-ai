@@ -41,24 +41,18 @@ def call_api(user_input):
     try:
         res = requests.get(url, params={"user_input": user_input}, timeout=30)
 
-        # Server error
         if res.status_code != 200:
             return {"error": f"Server error: {res.status_code}"}
 
-        # Empty response
         if not res.text.strip():
-            return {"error": "Backend is sleeping, try again"}
+            return {"error": "Backend sleeping, try again"}
 
-        # JSON parsing
-        try:
-            return res.json()
-        except:
-            return {"error": "Invalid response from backend, try again"}
+        return res.json()
 
     except requests.exceptions.Timeout:
-        return {"error": "Server is waking up, please try again"}
-    except Exception:
-        return {"error": "Backend not responding, please try again"}
+        return {"error": "Server waking up, try again"}
+    except Exception as e:
+        return {"error": str(e)}
 
 # ---------------- SESSION ----------------
 if "messages" not in st.session_state:
