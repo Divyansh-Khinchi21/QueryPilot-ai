@@ -7,46 +7,32 @@ app = FastAPI()
 
 # ---------------- SAFETY ----------------
 def is_safe(query):
-    q = query.lower().strip()
-    return q.startswith("select")
+    return query.lower().strip().startswith("select")
 
 
 # ---------------- API ----------------
 @app.get("/query")
 def run_query(user_input: str):
     try:
-        # 🔥 STEP 1: Detect NON-SELECT intent FIRST
-        unsafe_keywords = ["create", "insert", "delete", "update", "drop"]
-
-        if any(word in user_input.lower() for word in unsafe_keywords):
-            explanation_prompt = f"""
-            User asked: {user_input}
-
-            Explain how to do this in SQL.
-            Give example query.
-            Do NOT execute anything.
-            """
-
-            explanation = convert_to_sql(explanation_prompt)
-
+        # 🔥 QUICK RESPONSE TEST (IMPORTANT)
+        if user_input.lower() in ["test", "hello"]:
             return {
-                "query": "Not executable",
-                "data": [],
-                "columns": [],
-                "explanation": explanation
+                "query": "SELECT 1",
+                "data": [(1,)],
+                "columns": ["result"]
             }
 
-        # 🔹 STEP 2: NL → SQL
+        # 🔥 STEP 1: NL → SQL
         query = convert_to_sql(user_input)
 
         if "ERROR" in query:
             return {"error": query}
 
-        # 🔹 STEP 3: Safety check on generated SQL
+        # 🔥 STEP 2: Safety check
         if not is_safe(query):
             return {"error": "Only SELECT queries are allowed."}
 
-        # 🔹 STEP 4: Execute query
+        # 🔥 STEP 3: DB connect
         conn = get_connection()
         cursor = conn.cursor()
 
@@ -54,7 +40,7 @@ def run_query(user_input: str):
             cursor.execute(query)
 
         except Exception as err:
-            # 🔥 STEP 5: Auto-fix SQL
+            # 🔥 Auto-fix query
             fix_prompt = f"""
             Fix this SQL query:
 
@@ -77,7 +63,7 @@ def run_query(user_input: str):
             cursor.execute(fixed_query)
             query = fixed_query
 
-        # 🔹 STEP 6: Fetch data
+        # 🔥 STEP 4: Fetch data
         data = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 

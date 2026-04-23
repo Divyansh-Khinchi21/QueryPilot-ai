@@ -3,7 +3,6 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-
 def convert_to_sql(user_input):
     prompt = f"""
     You are an expert SQL generator.
@@ -14,28 +13,29 @@ def convert_to_sql(user_input):
     sales(customer, revenue, date)
 
     Rules:
-    - Only SELECT queries
-    - No explanation
-    - Add LIMIT 10 if missing
-    - Optimize query
+    - ONLY SELECT queries
+    - NO explanation
+    - ALWAYS add LIMIT 10 if missing
+    - Return ONLY SQL
 
     Input: {user_input}
     """
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=200
         )
 
         query = response.choices[0].message.content.strip()
 
-        # cleanup
+        # 🔥 CLEANUP
         query = query.replace("```sql", "").replace("```", "").strip()
 
-        if "SELECT" in query:
+        # 🔥 Ensure SELECT only
+        if "SELECT" in query.upper():
             query = query[query.upper().find("SELECT"):]
 
         return query
