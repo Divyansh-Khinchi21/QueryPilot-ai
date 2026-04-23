@@ -32,20 +32,33 @@ body {
 st.markdown('<div class="title">🤖 QueryPilot AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Ask anything about your database</div>', unsafe_allow_html=True)
 
+st.info("⚡ First query may take 10–20 sec (server wake-up)")
+
 # ---------------- API ----------------
 def call_api(user_input):
     url = "https://querypilot-ai.onrender.com/query"
 
     try:
-        res = requests.get(url, params={"user_input": user_input})
+        res = requests.get(url, params={"user_input": user_input}, timeout=30)
 
+        # Server error
         if res.status_code != 200:
-            return {"error": "Server error"}
+            return {"error": f"Server error: {res.status_code}"}
 
-        return res.json()
+        # Empty response
+        if not res.text.strip():
+            return {"error": "Backend is sleeping, try again"}
 
-    except:
-        return {"error": "Backend not responding, try again"}
+        # JSON parsing
+        try:
+            return res.json()
+        except:
+            return {"error": "Invalid response from backend, try again"}
+
+    except requests.exceptions.Timeout:
+        return {"error": "Server is waking up, please try again"}
+    except Exception:
+        return {"error": "Backend not responding, please try again"}
 
 # ---------------- SESSION ----------------
 if "messages" not in st.session_state:
@@ -55,12 +68,13 @@ if "messages" not in st.session_state:
 user_input = st.chat_input("Ask your database...")
 
 if user_input:
-    # user message
+    # Save user message
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # call backend
+    # Call backend
     res = call_api(user_input)
 
+    # Handle response
     if "error" in res:
         st.session_state.messages.append({
             "role": "assistant",
@@ -78,7 +92,7 @@ if user_input:
     else:
         st.session_state.messages.append({
             "role": "assistant",
-            "content": res["query"],
+            "content": "Here is your result 👇",
             "data": res
         })
 
@@ -87,53 +101,35 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-        # show result if exists
+        # Show result
         if msg["role"] == "assistant" and msg.get("data"):
             res = msg["data"]
 
-            # SQL
+            # SQL Query
             st.markdown("### 🧾 SQL Query")
-            st.code(res["query"], language="sql")
+            st.code(res.get("query", ""), language="sql")
 
             # Data
-            df = pd.DataFrame(res["data"], columns=res["columns"])
+            if res.get("data"):
+                df = pd.DataFrame(res["data"], columns=res["columns"])
 
-            st.markdown("### 📊 Result")
-            st.dataframe(df, use_container_width=True)
+                st.markdown("### 📊 Result")
+                st.dataframe(df, use_container_width=True)
 
-            # Chart
-            if not df.empty and df.shape[1] >= 2:
-                st.markdown("### 📈 Visualization")
+                # Chart
+                if not df.empty and df.shape[1] >= 2:
+                    st.markdown("### 📈 Visualization")
 
-                num_cols = df.select_dtypes(include="number").columns
+                    num_cols = df.select_dtypes(include="number").columns
 
-                if len(num_cols) > 0:
-                    try:
-                        st.bar_chart(df.set_index(df.columns[0])[num_cols])
-                    except:
-                        st.line_chart(df[num_cols])
+                    if len(num_cols) > 0:
+                        try:
+                            st.bar_chart(df.set_index(df.columns[0])[num_cols])
+                        except:
+                            st.line_chart(df[num_cols])
 
-        # show explanation if exists
-        if msg["role"] == "assistant" and msg.get("data") is None and msg.get("content"):
-            if "CREATE" in msg["content"] or "INSERT" in msg["content"]:
-                st.info("💡 This is an explanation (not executed):")
-
-
-def call_api(user_input):
-    url = "https://querypilot-ai.onrender.com/query"
-
-    try:
-        res = requests.get(url, params={"user_input": user_input}, timeout=30)
-
-        if res.status_code != 200:
-            return {"error": f"API Error: {res.status_code}"}
-
-        try:
-            return res.json()
-        except:
-            return {"error": "Backend waking up... try again in 5 seconds"}
-
-    except requests.exceptions.Timeout:
-        return {"error": "Server is waking up, please try again"}
-    except Exception as e:
-        return {"error": str(e)}
+        # Explanation block
+        if msg["role"] == "assistant" and msg.get("data") is None:
+            if msg.get("content"):
+                if any(word in msg["content"].upper() for word in ["CREATE", "INSERT", "UPDATE", "DELETE"]):
+                    st.info("💡 This is an explanation (not executed)")
