@@ -1,8 +1,8 @@
 fastapi
 uvicorn
-mysql-connector-python
 streamlit
 pandas
 requests
-openai
+mysql-connector-python
 python-dotenv
+groq
