@@ -35,7 +35,17 @@ st.markdown('<div class="subtitle">Ask anything about your database</div>', unsa
 # ---------------- API ----------------
 def call_api(user_input):
     url = "https://querypilot-ai.onrender.com/query"
-    return requests.get(url, params={"user_input": user_input}).json()
+
+    try:
+        res = requests.get(url, params={"user_input": user_input})
+
+        if res.status_code != 200:
+            return {"error": "Server error"}
+
+        return res.json()
+
+    except:
+        return {"error": "Backend not responding, try again"}
 
 # ---------------- SESSION ----------------
 if "messages" not in st.session_state:
