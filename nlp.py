@@ -23,7 +23,7 @@ def convert_to_sql(user_input):
 
     try:
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",  # ✅ FIXED
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=200
@@ -31,10 +31,8 @@ def convert_to_sql(user_input):
 
         query = response.choices[0].message.content.strip()
 
-        # 🔥 CLEANUP
         query = query.replace("```sql", "").replace("```", "").strip()
 
-        # 🔥 Ensure SELECT only
         if "SELECT" in query.upper():
             query = query[query.upper().find("SELECT"):]
 
